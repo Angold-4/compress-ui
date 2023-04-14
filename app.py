@@ -8,10 +8,11 @@ app = Flask(__name__)
 CORS(app)
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["COMPRESS_FOLDER"] = "compress"
+app.config["SPECIFIC_FOLDER"] = "specific"
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 os.makedirs(app.config["COMPRESS_FOLDER"], exist_ok=True)
-
+os.makedirs(app.config["SPECIFIC_FOLDER"], exist_ok=True)
 
 @app.route("/", methods=["GET"])
 def index():
@@ -24,6 +25,11 @@ def index():
         <body>
             <h1>Image Compressor</h1>
             <form action="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <input type="submit" value="Compress">
+            </form>
+            <br>
+            <form action="/specific" method="post" enctype="multipart/form-data">
                 <input type="file" name="image">
                 <input type="submit" value="Compress">
             </form>
@@ -62,6 +68,27 @@ def upload():
         </body>
     </html>
     ''', images=os.listdir(app.config["COMPRESS_FOLDER"]))
+
+@app.route("/specific", methods=["POST"])
+def specific():
+    specific_images = ["original.png", "output.jpeg", "comparison.png"]
+    return render_template_string('''<!doctype html>
+    <html>
+        <head>
+            <title>Specific Images</title>
+        </head>
+        <body>
+            <h1>Specific Images</h1>
+            {% for image_name in images %}
+            <div>
+                <h2>{{ image_name }}</h2>
+                <img src="{{ url_for('specific_image', image_name=image_name) }}" alt="{{ image_name }}">
+            </div>
+            {% endfor %}
+            <a href="/">Back</a>
+        </body>
+    </html>
+    ''', images=specific_images)
 
 
 @app.route("/compressed/<image_name>", methods=["GET"])
