@@ -5,6 +5,8 @@ import numpy as np
 import imageio
 
 import torch
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb=10"  # You can adjust the value as needed
 
 """ Parse the arguments """
 
