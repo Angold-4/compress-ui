@@ -20,15 +20,17 @@ def index():
     <!doctype html>
     <html>
         <head>
-            <title>Image Compressor</title>
+            <title>Learned Image Compression</title>
         </head>
         <body>
-            <h1>Image Compressor</h1>
+            <h1>Variable Rate Lossy Image Compression with LSTM RNN</h1>
             <form action="/upload" method="post" enctype="multipart/form-data">
                 <input type="file" name="image">
                 <input type="submit" value="Compress">
             </form>
             <br>
+            <br>
+            <h1>End-to-end learned Image Compression</h1>
             <form action="/specific" method="post" enctype="multipart/form-data">
                 <input type="file" name="image">
                 <input type="submit" value="Compress">
@@ -71,7 +73,7 @@ def upload():
 
 @app.route("/specific", methods=["POST"])
 def specific():
-    specific_images = ["original.png", "output.jpeg", "comparison.png"]
+    specific_images = os.listdir(app.config["SPECIFIC_FOLDER"])
     return render_template_string('''<!doctype html>
     <html>
         <head>
