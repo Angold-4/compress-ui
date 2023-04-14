@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory, jsonify
+from flask import Flask, request, send_from_directory, jsonify, render_template_string
 from flask_cors import CORS
 from PIL import Image
 import os
@@ -43,12 +43,31 @@ def upload():
     image_path = os.path.join(app.config["UPLOAD_FOLDER"], image_name)
     image.save(image_path)
 
-    subprocess.run(["python3", "compress.py", image_path])
+    subprocess.run(["sh", "compress.sh", image_name])
 
-    compressed_image_path = os.path.join(app.config["COMPRESS_FOLDER"], image_name)
+    return render_template_string('''<!doctype html>
+    <html>
+        <head>
+            <title>Compressed Images</title>
+        </head>
+        <body>
+            <h1>Compressed Images</h1>
+            {% for image_name in images %}
+            <div>
+                <h2>{{ image_name }}</h2>
+                <img src="{{ url_for('compressed_image', image_name=image_name) }}" alt="{{ image_name }}">
+            </div>
+            {% endfor %}
+            <a href="/">Back</a>
+        </body>
+    </html>
+    ''', images=os.listdir(app.config["COMPRESS_FOLDER"]))
+
+
+@app.route("/compressed/<image_name>", methods=["GET"])
+def compressed_image(image_name):
     return send_from_directory(app.config["COMPRESS_FOLDER"], image_name)
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8090)
-
