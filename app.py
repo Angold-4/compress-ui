@@ -152,6 +152,7 @@ def compression_result():
     subpath = "aec"
     compressed_file_path = os.path.join("compress", subpath, compressed_file)
     compressed_size = os.path.getsize(compressed_file_path)
+    download_url = url_for('download', subpath=subpath, filename=compressed_file)
 
     return render_template_string('''
     <!doctype html>
@@ -162,12 +163,12 @@ def compression_result():
         <body>
             <h1>Compression Result</h1>
             <h2>Compressed File Size: {{ compressed_size }} bytes</h2>
-            <a href="{{ url_for('download', subpath=subpath, filename=compressed_file) }}">Download compressed file</a>
+            <a href="{{ download_url }}">Download compressed file</a>
             <br><br>
             <a href="/">Back</a>
         </body>
     </html>
-    ''', compressed_size=compressed_size)
+    ''', compressed_size=compressed_size, download_url=download_url)
 
 @app.route("/decompression_result", methods=["GET"])
 def decompression_result():
@@ -195,8 +196,8 @@ def compressed_image(image_name):
     return send_from_directory(app.config["COMPRESS_FOLDER"], image_name)
 
 @app.route("/download/<path:subpath>/<filename>")
-def download(filename):
-    return send_from_directory("compress/aec/", filename, as_attachment=True)
+def download(subpath, filename):
+    return send_from_directory(os.path.join("compress", subpath), filename, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8090)
