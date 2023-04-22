@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory, jsonify, render_template_string, session, redirect, url_for
+from flask import Flask, request, send_from_directory, jsonify, render_template_string, session, redirect, url_for, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 import os
@@ -8,7 +8,6 @@ app = Flask(__name__)
 CORS(app)
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["COMPRESS_FOLDER"] = "compress"
-:qa
 app.config["SPECIFIC_FOLDER"] = "specific"
 
 app.secret_key = 'super secret key'
@@ -34,9 +33,14 @@ def index():
             <br>
             <br>
             <h1>End-to-end learned Image Compression</h1>
-            <form action="/specific" method="post" enctype="multipart/form-data">
+            <form action="/upload_compress" method="post" enctype="multipart/form-data">
                 <input type="file" name="image">
                 <input type="submit" value="Compress">
+            </form>
+            <br>
+            <form action="/upload_decompress" method="post" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <input type="submit" value="Decompress">
             </form>
         </body>
     </html>
@@ -111,32 +115,88 @@ def display():
     ''', image_name=image_name, compression_ratio=compression_ratio, compressed_size=compressed_size, original_size=original_size, original_image_path=original_image_path)
 
 
-@app.route("/specific", methods=["POST"])
-def specific():
-    specific_images = os.listdir(app.config["SPECIFIC_FOLDER"])
-    return render_template_string('''<!doctype html>
+@app.route("/upload_compress", methods=["POST"])
+def upload_compress():
+    image = request.files["image"]
+    image_name = image.filename
+
+    if image_name is None:
+        return "No image provided", 400
+
+    image_path = os.path.join(app.config["UPLOAD_FOLDER"], image_name)
+    image.save(image_path)
+
+    # Run the compression script
+    subprocess.run(["sh", "aecompress.sh", image_name])
+
+    return redirect(url_for("compression_result"))
+
+@app.route("/upload_decompress", methods=["POST"])
+def upload_decompress():
+    image = request.files["image"]
+    image_name = image.filename
+
+    if image_name is None:
+        return "No image provided", 400
+
+    image_path = os.path.join(app.config["UPLOAD_FOLDER"], image_name)
+    image.save(image_path)
+
+    # Run the decompression script
+    subprocess.run(["sh", "decompress.sh", image_name])
+
+    return redirect(url_for("decompression_result"))
+
+@app.route("/compression_result", methods=["GET"])
+def compression_result():
+    compressed_file = "compressed.tfci"
+    compressed_file_path = os.path.join("compress", "aec", compressed_file)
+    compressed_size = os.path.getsize(compressed_file_path)
+
+    return render_template_string('''
+    <!doctype html>
     <html>
         <head>
-            <title>Specific Images</title>
+            <title>Compression Result</title>
         </head>
         <body>
-            <h1>Specific Images</h1>
-            {% for image_name in images %}
-            <div>
-                <h2>{{ image_name }}</h2>
-                <img src="{{ url_for('specific_image', image_name=image_name) }}" alt="{{ image_name }}">
-            </div>
-            {% endfor %}
+            <h1>Compression Result</h1>
+            <h2>Compressed File Size: {{ compressed_size }} bytes</h2>
+            <a href="{{ url_for('download', filename=compressed_file) }}">Download compressed file</a>
+            <br><br>
             <a href="/">Back</a>
         </body>
     </html>
-    ''', images=specific_images)
+    ''', compressed_size=compressed_size)
 
+@app.route("/decompression_result", methods=["GET"])
+def decompression_result():
+    decompressed_file = "decompress.png"
+    decompressed_file_path = os.path.join("compress", "decompressed", decompressed_file)
+
+    return render_template_string('''
+    <!doctype html>
+    <html>
+        <head>
+            <title>Decompression Result</title>
+        </head>
+        <body>
+            <h1>Decompression Result</h1>
+            <h2>Decompressed Image</h2>
+            <img src="{{ url_for('static', filename=decompressed_file) }}" alt="Decompressed Image">
+            <br><br>
+            <a href="/">Back</a>
+        </body>
+    </html>
+    ''', decompressed_file=decompressed_file)
 
 @app.route("/compressed/<image_name>", methods=["GET"])
 def compressed_image(image_name):
     return send_from_directory(app.config["COMPRESS_FOLDER"], image_name)
 
+@app.route("/download/<filename>")
+def download(filename):
+    return send_from_directory("compress/aec", filename, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8090)
