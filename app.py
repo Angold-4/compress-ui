@@ -173,7 +173,7 @@ def compression_result():
 @app.route("/decompression_result", methods=["GET"])
 def decompression_result():
     decompressed_file = "decompress.png"
-    decompressed_file_path = os.path.join("compress", "decompressed", decompressed_file)
+    download_url = url_for('download', subpath="decompressed", filename=decompressed_file)
 
     return render_template_string('''
     <!doctype html>
@@ -184,12 +184,12 @@ def decompression_result():
         <body>
             <h1>Decompression Result</h1>
             <h2>Decompressed Image</h2>
-            <img src="{{ url_for('static', filename=decompressed_file) }}" alt="Decompressed Image">
+            <img src="{{ download_url }}" alt="Decompressed Image">
             <br><br>
             <a href="/">Back</a>
         </body>
     </html>
-    ''', decompressed_file=decompressed_file)
+    ''', decompressed_file=decompressed_file, download_url=download_url)
 
 @app.route("/compressed/<image_name>", methods=["GET"])
 def compressed_image(image_name):
