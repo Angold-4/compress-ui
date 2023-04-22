@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory, jsonify, render_template_string
+from flask import Flask, request, send_from_directory, jsonify, render_template_string, session, redirect, url_for
 from flask_cors import CORS
 from PIL import Image
 import os
@@ -8,7 +8,10 @@ app = Flask(__name__)
 CORS(app)
 app.config["UPLOAD_FOLDER"] = "uploads"
 app.config["COMPRESS_FOLDER"] = "compress"
+:qa
 app.config["SPECIFIC_FOLDER"] = "specific"
+
+app.secret_key = 'super secret key'
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 os.makedirs(app.config["COMPRESS_FOLDER"], exist_ok=True)
@@ -39,6 +42,28 @@ def index():
     </html>
     '''
 
+@app.route("/select", methods=["GET"])
+def select():
+    return render_template_string('''
+    <!doctype html>
+    <html>
+        <head>
+            <title>Select Compressed Image</title>
+        </head>
+        <body>
+            <h1>Select Compressed Image</h1>
+            <form action="/display" method="post">
+                <select name="image_name">
+                    {% for image_name in images %}
+                        <option value="{{ image_name }}">{{ image_name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="submit" value="Display">
+            </form>
+            <a href="/">Back</a>
+        </body>
+    </html>
+    ''', images=sorted(os.listdir(app.config["COMPRESS_FOLDER"])))
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -50,26 +75,41 @@ def upload():
 
     image_path = os.path.join(app.config["UPLOAD_FOLDER"], image_name)
     image.save(image_path)
+    session['original_image_path'] = image_path
 
     subprocess.run(["sh", "compress.sh", image_name])
 
-    return render_template_string('''<!doctype html>
+    return redirect(url_for("select"))
+
+
+@app.route("/display", methods=["POST"])
+def display():
+    image_name = request.form["image_name"]
+    original_image_path = session.get('original_image_path')
+    compressed_image_path = os.path.join(app.config["COMPRESS_FOLDER"], image_name)
+
+    compressed_size = os.path.getsize(compressed_image_path)
+    original_size = os.path.getsize(original_image_path)
+    compression_ratio = round(compressed_size / original_size, 2)
+
+    return render_template_string('''
+    <!doctype html>
     <html>
         <head>
-            <title>Compressed Images</title>
+            <title>Image Details</title>
         </head>
         <body>
-            <h1>Compressed Images</h1>
-            {% for image_name in images %}
-            <div>
-                <h2>{{ image_name }}</h2>
-                <img src="{{ url_for('compressed_image', image_name=image_name) }}" alt="{{ image_name }}">
-            </div>
-            {% endfor %}
-            <a href="/">Back</a>
+            <h1>Image Details</h1>
+            <h2>Compressed Image</h2>
+            <img src="{{ url_for('compressed_image', image_name=image_name) }}" alt="Compressed Image">
+            <h2>Compression Ratio: {{ compression_ratio }}</h2>
+            <h2>File Size: {{ compressed_size }} bytes</h2>
+            <h2>Original File Size: {{ original_size }} bytes</h2>
+            <a href="#" onclick="window.history.back();">Back</a>
         </body>
     </html>
-    ''', images=os.listdir(app.config["COMPRESS_FOLDER"]))
+    ''', image_name=image_name, compression_ratio=compression_ratio, compressed_size=compressed_size, original_size=original_size, original_image_path=original_image_path)
+
 
 @app.route("/specific", methods=["POST"])
 def specific():
