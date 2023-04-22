@@ -85,7 +85,6 @@ def upload():
 
     return redirect(url_for("select"))
 
-
 @app.route("/display", methods=["POST"])
 def display():
     image_name = request.form["image_name"]
@@ -150,7 +149,8 @@ def upload_decompress():
 @app.route("/compression_result", methods=["GET"])
 def compression_result():
     compressed_file = "compressed.tfci"
-    compressed_file_path = os.path.join("compress", "aec", compressed_file)
+    subpath = "aec"
+    compressed_file_path = os.path.join("compress", subpath, compressed_file)
     compressed_size = os.path.getsize(compressed_file_path)
 
     return render_template_string('''
@@ -162,7 +162,7 @@ def compression_result():
         <body>
             <h1>Compression Result</h1>
             <h2>Compressed File Size: {{ compressed_size }} bytes</h2>
-            <a href="{{ url_for('download', filename=compressed_file) }}">Download compressed file</a>
+            <a href="{{ url_for('download', subpath=subpath, filename=compressed_file) }}">Download compressed file</a>
             <br><br>
             <a href="/">Back</a>
         </body>
@@ -194,9 +194,9 @@ def decompression_result():
 def compressed_image(image_name):
     return send_from_directory(app.config["COMPRESS_FOLDER"], image_name)
 
-@app.route("/download/<filename>")
+@app.route("/download/<path:subpath>/<filename>")
 def download(filename):
-    return send_from_directory("compress/aec", filename, as_attachment=True)
+    return send_from_directory("compress/aec/", filename, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8090)
