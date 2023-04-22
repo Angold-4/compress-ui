@@ -22,17 +22,18 @@ def index():
     <!doctype html>
     <html>
         <head>
-            <title>Learned Image Compression</title>
+            <title>COMPS456F FYP DEMO Wyman</title>
         </head>
         <body>
-            <h1>Variable Rate Lossy Image Compression with LSTM RNN</h1>
+            <h1>Learned Image Compression</h1>
+            <h2>1. Variable Rate Lossy Image Compression with LSTM RNN</h1>
             <form action="/upload" method="post" enctype="multipart/form-data">
                 <input type="file" name="image">
                 <input type="submit" value="Compress">
             </form>
             <br>
             <br>
-            <h1>End-to-end learned Image Compression</h1>
+            <h2>2. End-to-end learned Image Compression</h1>
             <form action="/upload_compress" method="post" enctype="multipart/form-data">
                 <input type="file" name="image">
                 <input type="submit" value="Compress">
@@ -42,9 +43,26 @@ def index():
                 <input type="file" name="image">
                 <input type="submit" value="Decompress">
             </form>
+            <br>
+            <br>
+            <h1>Image Dehazing</h1>
+            <h2>3. Image dehazing gunet</h2>
+            <form action="/upload_dehazing" method="post" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <input type="submit" value="Upload">
+            </form>
+            <br>
+            <form action="/clear_dehazing" method="post">
+                <input type="submit" value="Clear">
+            </form>
+            <br>
+            <form action="/run_dehazing" method="post">
+                <input type="submit" value="Dehaze">
+            </form>
         </body>
     </html>
     '''
+
 
 @app.route("/select", methods=["GET"])
 def select():
@@ -170,6 +188,7 @@ def compression_result():
     </html>
     ''', compressed_size=compressed_size, download_url=download_url)
 
+
 @app.route("/decompression_result", methods=["GET"])
 def decompression_result():
     decompressed_file = "decompress.png"
@@ -190,6 +209,62 @@ def decompression_result():
         </body>
     </html>
     ''', decompressed_file=decompressed_file, download_url=download_url)
+
+
+@app.route("/upload_dehazing", methods=["POST"])
+def upload_dehazing():
+    image = request.files["image"]
+    image_name = image.filename
+
+    if image_name is None:
+        return "No image provided", 400
+
+    image_path = os.path.join("scripts", "gunet", "data", "trial", image_name)
+    image.save(image_path)
+
+    return redirect(url_for("index"))
+
+
+@app.route("/clear_dehazing", methods=["POST"])
+def clear_dehazing():
+    trial_folder = os.path.join("scripts", "gunet", "data", "trial")
+    for file in os.listdir(trial_folder):
+        file_path = os.path.join(trial_folder, file)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
+    return redirect(url_for("index"))
+
+@app.route("/display_dehazed_images", methods=["GET"])
+def display_dehazed_images():
+    results_folder = os.path.join("scripts", "gunet", "results", "trial")
+    images = sorted(os.listdir(results_folder))
+
+    return render_template_string('''
+    <!doctype html>
+    <html>
+        <head>
+            <title>Dehazed Images</title>
+        </head>
+        <body>
+        <h1>Dehazed Images</h1>
+        {% for image_name in images %}
+        <img src="{{ url_for('dehazed_image', image_name=image_name) }}" alt="Dehazed Image" style="max-width: 300px;">
+        <br><br>
+        {% endfor %}
+        <a href="/">Back</a>
+        </body>
+    </html>
+    ''', images=images)
+
+@app.route("/dehazed_image/<image_name>")
+def dehazed_image(image_name):
+    return send_from_directory(os.path.join("scripts", "gunet", "results", "trial"), image_name)
+
+@app.route("/run_dehazing", methods=["POST"])
+def run_dehazing():
+    subprocess.run(["sh", "dehazing.sh"])
+    return redirect(url_for("display_dehazed_images"))
 
 @app.route("/compressed/<image_name>", methods=["GET"])
 def compressed_image(image_name):
