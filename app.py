@@ -237,7 +237,7 @@ def clear_dehazing():
 
 @app.route("/display_dehazed_images", methods=["GET"])
 def display_dehazed_images():
-    results_folder = os.path.join("scripts", "gunet", "results", "trial")
+    results_folder = os.path.join("scripts", "gunet", "results", "trial", "reside-in", "gunet-b", "imgs")
     images = sorted(os.listdir(results_folder))
 
     return render_template_string('''
@@ -259,7 +259,7 @@ def display_dehazed_images():
 
 @app.route("/dehazed_image/<image_name>")
 def dehazed_image(image_name):
-    return send_from_directory(os.path.join("scripts", "gunet", "results", "trial"), image_name)
+    return send_from_directory(os.path.join("scripts", "gunet", "results", "trial", "reside-in", "gunet-b", "imgs"), image_name)
 
 @app.route("/run_dehazing", methods=["POST"])
 def run_dehazing():
