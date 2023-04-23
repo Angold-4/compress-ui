@@ -59,10 +59,25 @@ def index():
             <form action="/run_dehazing" method="post">
                 <input type="submit" value="Dehaze">
             </form>
+            <br>
+            <br>
+            <h1>Deraindrop</h1>
+            <h2>4. Deraindrop</h2>
+            <form action="/upload_deraindrop" method="post" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <input type="submit" value="Upload">
+            </form>
+            <br>
+            <form action="/clear_deraindrop" method="post">
+                <input type="submit" value="Clear">
+            </form>
+            <br>
+            <form action="/run_deraindrop" method="post">
+                <input type="submit" value="Deraining">
+            </form>
         </body>
     </html>
     '''
-
 
 @app.route("/select", methods=["GET"])
 def select():
@@ -262,6 +277,57 @@ def display_dehazed_images():
         </body>
     </html>
     ''', images=images)
+
+@app.route("/upload_deraindrop", methods=["POST"])
+def upload_deraindrop():
+    image = request.files["image"]
+    image_name = image.filename
+
+    if image_name is None:
+        return "No image provided", 400
+
+    image_path = os.path.join("scripts", "cyclegan", "datasets", "raindrop2clear", "testA", image_name)
+    image.save(image_path)
+
+    return redirect(url_for("index"))
+
+@app.route("/clear_deraindrop", methods=["POST"])
+def clear_deraindrop():
+    folder = os.path.join("scripts", "cyclegan", "datasets", "raindrop2clear", "testA")
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
+    return redirect(url_for("index"))
+
+@app.route("/run_deraindrop", methods=["POST"])
+def run_deraindrop():
+    subprocess.run(["sh", "deraindrop.sh"])
+
+    fake_images = []
+    results_folder = os.path.join("scripts", "cyclegan", "results", "raindrop2clear", "test_latest", "images")
+    for filename in os.listdir(results_folder):
+        if "fake_A" in filename:
+            fake_images.append(os.path.join(results_folder, filename))
+
+    return render_template_string('''
+    <!doctype html>
+    <html>
+        <head>
+            <title>Deraindrop Results</title>
+        </head>
+        <body>
+            <h1>Deraindrop Results</h1>
+            {% for image in fake_images %}
+                <img src="{{ url_for('static', filename=image) }}" width="300">
+            {% endfor %}
+            <br><br>
+            <a href="/">Back</a>
+        </body>
+    </html>
+    ''', fake_images=fake_images)
+
 
 @app.route("/dehazed_image/<image_name>")
 def dehazed_image(image_name):
