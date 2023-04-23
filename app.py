@@ -75,6 +75,17 @@ def index():
             <form action="/run_deraindrop" method="post">
                 <input type="submit" value="Deraining">
             </form>
+            <br>
+            <br>
+            <h1>Image Deraining</h1>
+            <h2>5. Image Deraining PReNet</h2>
+            <form action="/upload_deraining_prenet" method="post" enctype="multipart/form-data">
+                <input type="file" name="image">
+                <input type="submit" value="Derain">
+            </form>
+        </body>
+    </html>
+
         </body>
     </html>
     '''
@@ -312,10 +323,16 @@ def run_deraindrop():
     subprocess.run(["sh", "deraindrop.sh"])
 
     fake_images = []
+    real_images = []
     results_folder = os.path.join("scripts", "cyclegan", "results", "raindrop2clear", "test_latest", "images")
     for filename in os.listdir(results_folder):
-        if "fake_A" in filename:
+        if "fake_B" in filename:
             fake_images.append(filename)
+        if "real_A" in filename:
+            real_images.append(filename)
+
+    fake_images = sorted(fake_images)
+    real_images = sorted(real_images)
 
     return render_template_string('''
     <!doctype html>
@@ -325,14 +342,68 @@ def run_deraindrop():
         </head>
         <body>
             <h1>Deraindrop Results</h1>
+            {% for image in real_images %}
+                <img src="{{ url_for('deraindrop_image', image_name=image) }}" width="400">
+            {% endfor %}
+            <br>
+            <br>
             {% for image in fake_images %}
-                <img src="{{ url_for('deraindrop_image', image_name=image) }}" width="300">
+                <img src="{{ url_for('deraindrop_image', image_name=image) }}" width="400">
             {% endfor %}
             <br><br>
             <a href="/">Back</a>
         </body>
     </html>
-    ''', fake_images=fake_images)
+    ''', fake_images=fake_images, real_images=real_images)
+
+@app.route("/upload_deraining_prenet", methods=["POST"])
+def upload_deraining_prenet():
+    image = request.files["image"]
+    image_name = image.filename
+
+    if image_name is None:
+        return "No image provided", 400
+
+
+    rainy_image_path_ = os.path.join("scripts", "prenet", "datasets", "demo", "rainy")
+    rainy_image_path = os.path.join("scripts", "prenet", "datasets", "demo", "rainy", image_name)
+
+    for filename in os.listdir(rainy_image_path_):
+        file_path = os.path.join(rainy_image_path_, filename)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
+    image.save(rainy_image_path)
+
+    results_folder = os.path.join("scripts", "prenet", "results", "demo_result")
+    
+    for filename in os.listdir(results_folder):
+        file_path = os.path.join(results_folder, filename)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
+    subprocess.run(["sh", "deraining.sh", image_name])
+
+    result_images = []
+    for filename in os.listdir(results_folder):
+        result_images.append(filename)
+
+    return render_template_string('''
+    <!doctype html>
+    <html>
+        <head>
+            <title>Deraining Results</title>
+        </head>
+        <body>
+            <h1>Deraining Results</h1>
+            {% for image in result_images %}
+                <img src="{{ url_for('deraining_image', image_name=image) }}" width="300">
+            {% endfor %}
+            <br><br>
+            <a href="/">Back</a>
+        </body>
+    </html>
+    ''', result_images=result_images)
 
 
 @app.route("/dehazed_image/<image_name>")
@@ -342,6 +413,10 @@ def dehazed_image(image_name):
 @app.route("/deraindrop_image/<image_name>")
 def deraindrop_image(image_name):
     return send_from_directory(os.path.join("scripts", "cyclegan", "results", "raindrop2clear", "test_latest", "images"), image_name)
+
+@app.route("/deraining_image/<image_name>")
+def deraining_image(image_name):
+    return send_from_directory(os.path.join("scripts", "prenet", "results", "demo_result"), image_name)
 
 @app.route("/run_dehazing", methods=["POST"])
 def run_dehazing():
