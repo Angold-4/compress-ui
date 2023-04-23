@@ -299,6 +299,12 @@ def clear_deraindrop():
         if os.path.isfile(file_path):
             os.unlink(file_path)
 
+    folder = os.path.join("scripts", "cyclegan", "results", "raindrop2clear", "test_latest", "images")
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+
     return redirect(url_for("index"))
 
 @app.route("/run_deraindrop", methods=["POST"])
@@ -309,7 +315,7 @@ def run_deraindrop():
     results_folder = os.path.join("scripts", "cyclegan", "results", "raindrop2clear", "test_latest", "images")
     for filename in os.listdir(results_folder):
         if "fake_A" in filename:
-            fake_images.append(os.path.join(results_folder, filename))
+            fake_images.append(filename)
 
     return render_template_string('''
     <!doctype html>
@@ -320,7 +326,7 @@ def run_deraindrop():
         <body>
             <h1>Deraindrop Results</h1>
             {% for image in fake_images %}
-                <img src="{{ url_for('static', filename=image) }}" width="300">
+                <img src="{{ url_for('deraindrop_image', image_name=image) }}" width="300">
             {% endfor %}
             <br><br>
             <a href="/">Back</a>
@@ -332,6 +338,10 @@ def run_deraindrop():
 @app.route("/dehazed_image/<image_name>")
 def dehazed_image(image_name):
     return send_from_directory(os.path.join("scripts", "gunet", "results", "trial", "reside-in", "gunet_b", "imgs"), image_name)
+
+@app.route("/deraindrop_image/<image_name>")
+def deraindrop_image(image_name):
+    return send_from_directory(os.path.join("scripts", "cyclegan", "results", "raindrop2clear", "test_latest", "images"), image_name)
 
 @app.route("/run_dehazing", methods=["POST"])
 def run_dehazing():
